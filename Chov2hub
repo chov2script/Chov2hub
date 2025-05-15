@@ -1,0 +1,49 @@
+-- Создание GUI
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local ToggleButton = Instance.new("TextButton")
+
+-- Свойства GUI
+ScreenGui.Name = "CustomMenu"
+ScreenGui.Parent = game.CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Основное окно
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.BackgroundTransparency = 0.3
+MainFrame.BorderSizePixel = 0
+MainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
+MainFrame.Size = UDim2.new(0, 400, 0, 250)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+-- Скругление углов
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 20)
+UICorner.Parent = MainFrame
+
+-- Кнопка сворачивания
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = MainFrame
+ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ToggleButton.BorderSizePixel = 0
+ToggleButton.Position = UDim2.new(1, -40, 0, 10)
+ToggleButton.Size = UDim2.new(0, 30, 0, 30)
+ToggleButton.Text = "-"
+ToggleButton.TextColor3 = Color3.new(1, 1, 1)
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.TextSize = 20
+
+-- Скругление кнопки
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(1, 0)
+ButtonCorner.Parent = ToggleButton
+
+-- Функция скрытия/показа
+local isMinimized = false
+ToggleButton.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    MainFrame.Size = isMinimized and UDim2.new(0, 400, 0, 50) or UDim2.new(0, 400, 0, 250)
+end)
