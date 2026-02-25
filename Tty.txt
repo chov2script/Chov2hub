@@ -1,0 +1,205 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+
+local lp = Players.LocalPlayer
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Parent = lp:WaitForChild("PlayerGui")
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+
+-- Основное окно
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0,380,0,240)
+main.Position = UDim2.new(0.5,-190,0.5,-120)
+main.BackgroundColor3 = Color3.fromRGB(38,38,38)
+main.BorderSizePixel = 0
+main.ZIndex = 5
+main.Active = true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,16)
+
+-- Кнопка свернуть (ВСЕГДА поверх)
+local closeBtn = Instance.new("TextButton", gui)
+closeBtn.Size = UDim2.new(0,34,0,34)
+closeBtn.Position = UDim2.new(0.5,190-40,0.5,-120+6)
+closeBtn.Text = "—"
+closeBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
+closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.ZIndex = 999
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(1,0)
+
+-- Кнопка открыть
+local hideBtn = Instance.new("TextButton", gui)
+hideBtn.Size = UDim2.new(0,90,0,32)
+hideBtn.Position = UDim2.new(0,20,0.5,-16)
+hideBtn.Text = "Open"
+hideBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
+hideBtn.TextColor3 = Color3.new(1,1,1)
+hideBtn.Visible = false
+hideBtn.ZIndex = 999
+Instance.new("UICorner", hideBtn).CornerRadius = UDim.new(0,12)
+
+-- Анимация
+local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+local defaultSize = UDim2.new(0,380,0,240)
+local defaultPos = UDim2.new(0.5,-190,0.5,-120)
+
+local function toggleMenu(show)
+	if show then
+		main.Visible = true
+		main.Size = UDim2.new(0,0,0,0)
+		main.Position = defaultPos
+		main.BackgroundTransparency = 1
+		hideBtn.Visible = false
+		
+		TweenService:Create(main, tweenInfo, {
+			Size = defaultSize,
+			BackgroundTransparency = 0
+		}):Play()
+	else
+		local t = TweenService:Create(main, tweenInfo, {
+			Size = UDim2.new(0,0,0,0),
+			BackgroundTransparency = 1
+		})
+		t:Play()
+		t.Completed:Once(function()
+			main.Visible = false
+			hideBtn.Visible = true
+			main.Size = defaultSize
+		end)
+	end
+end
+
+closeBtn.MouseButton1Click:Connect(function()
+	toggleMenu(false)
+end)
+
+hideBtn.MouseButton1Click:Connect(function()
+	toggleMenu(true)
+end)
+
+-- Sidebar
+local side = Instance.new("Frame", main)
+side.Size = UDim2.new(0,100,1,0)
+side.BackgroundColor3 = Color3.fromRGB(32,32,32)
+side.BorderSizePixel = 0
+side.ZIndex = 6
+Instance.new("UICorner", side).CornerRadius = UDim.new(0,16)
+
+-- Контент
+local content = Instance.new("Frame", main)
+content.Position = UDim2.new(0,100,0,0)
+content.Size = UDim2.new(1,-100,1,0)
+content.BackgroundTransparency = 1
+content.ZIndex = 6
+
+local movePage = Instance.new("Frame", content)
+movePage.Size = UDim2.new(1,0,1,0)
+movePage.BackgroundTransparency = 1
+
+local dataPage = Instance.new("Frame", content)
+dataPage.Size = UDim2.new(1,0,1,0)
+dataPage.Visible = false
+dataPage.BackgroundTransparency = 1
+
+-- Tabs
+local function tab(name,pos)
+	local b = Instance.new("TextButton", side)
+	b.Size = UDim2.new(1,-16,0,36)
+	b.Position = UDim2.new(0,8,0,20+pos*46)
+	b.Text = name
+	b.TextColor3 = Color3.new(1,1,1)
+	b.BackgroundColor3 = Color3.fromRGB(55,55,55)
+	b.BorderSizePixel = 0
+	b.ZIndex = 7
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
+	return b
+end
+
+local moveBtn = tab("Move",0)
+local dataBtn = tab("Data",1)
+moveBtn.BackgroundColor3 = Color3.fromRGB(0,120,255)
+
+local function switch(p,btn)
+	movePage.Visible=false
+	dataPage.Visible=false
+	moveBtn.BackgroundColor3=Color3.fromRGB(55,55,55)
+	dataBtn.BackgroundColor3=Color3.fromRGB(55,55,55)
+	p.Visible=true
+	btn.BackgroundColor3=Color3.fromRGB(0,120,255)
+end
+
+moveBtn.MouseButton1Click:Connect(function() switch(movePage,moveBtn) end)
+dataBtn.MouseButton1Click:Connect(function() switch(dataPage,dataBtn) end)
+
+-- Toggle
+local speedOn=false
+local jumpOn=false
+
+local function apply()
+	local char = lp.Character
+	if not char then return end
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if not hum then return end
+	
+	hum.UseJumpPower = true
+	hum.WalkSpeed = speedOn and 32 or 16
+	hum.JumpPower = jumpOn and 100 or 50
+end
+
+lp.CharacterAdded:Connect(function()
+	task.wait(1)
+	apply()
+end)
+
+local function toggle(parent,text,pos,func)
+	local f = Instance.new("Frame", parent)
+	f.Size = UDim2.new(1,-30,0,42)
+	f.Position = UDim2.new(0,15,0,20+pos*52)
+	f.BackgroundColor3 = Color3.fromRGB(45,45,45)
+	f.BorderSizePixel = 0
+	Instance.new("UICorner", f).CornerRadius = UDim.new(0,12)
+
+	local t = Instance.new("TextLabel", f)
+	t.Size = UDim2.new(0.6,0,1,0)
+	t.Text = text
+	t.TextColor3 = Color3.new(1,1,1)
+	t.BackgroundTransparency = 1
+	t.TextScaled = true
+
+	local b = Instance.new("TextButton", f)
+	b.Size = UDim2.new(0,50,0,26)
+	b.Position = UDim2.new(1,-60,0.5,-13)
+	b.Text = ""
+	b.BackgroundColor3 = Color3.fromRGB(60,60,60)
+	b.BorderSizePixel = 0
+	Instance.new("UICorner", b).CornerRadius = UDim.new(1,0)
+
+	local state=false
+	b.MouseButton1Click:Connect(function()
+		state=not state
+		b.BackgroundColor3 = state and Color3.fromRGB(0,120,255) or Color3.fromRGB(60,60,60)
+		func(state)
+	end)
+end
+
+toggle(movePage,"Speed x2",0,function(s)
+	speedOn=s
+	apply()
+end)
+
+toggle(movePage,"Jump x2",1,function(s)
+	jumpOn=s
+	apply()
+end)
+
+-- Data
+local version = Instance.new("TextLabel", dataPage)
+version.Size = UDim2.new(1,0,1,0)
+version.Text = "Release 1.3.7"
+version.TextColor3 = Color3.new(1,1,1)
+version.BackgroundTransparency = 1
+version.TextScaled = true
+version.ZIndex = 7
