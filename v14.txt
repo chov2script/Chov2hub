@@ -1,0 +1,130 @@
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- [[ ГЛОБАЛЬНЫЕ НАСТРОЙКИ ]]
+_G.Config = {
+    RGB = false, ThinArms = false, TpSpeed = false, TpJump = false,
+    Noclip = false, ESP = false, Night = false,
+    TpMultiplier = 2, TpJumpPower = 15, FieldOfView = 100
+}
+
+local OriginalTime = Lighting.ClockTime
+local TargetHighlight = Instance.new("Highlight"); TargetHighlight.Name = "SmartESP"; TargetHighlight.FillTransparency = 0.5; TargetHighlight.OutlineTransparency = 0
+
+-- [[ GUI ]]
+local ScreenGui = Instance.new("ScreenGui", Player:WaitForChild("PlayerGui")); ScreenGui.Name = "FinalMenu_V14"; ScreenGui.ResetOnSpawn = false
+local Blur = Instance.new("BlurEffect", Lighting); Blur.Size = 0; Blur.Enabled = true
+
+local OpenBtn = Instance.new("TextButton", ScreenGui); OpenBtn.Size = UDim2.new(0, 50, 0, 50); OpenBtn.Position = UDim2.new(0.05, 0, 0.1, 0); OpenBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40); OpenBtn.Text = "M"; OpenBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(1, 0); OpenBtn.Visible = false
+
+local MainFrame = Instance.new("Frame", ScreenGui); MainFrame.Size = UDim2.new(0, 260, 0, 400); MainFrame.Position = UDim2.new(0.5, -130, 0.5, -200); MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25); MainFrame.BackgroundTransparency = 0.2; Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
+
+local TopBar = Instance.new("Frame", MainFrame); TopBar.Size = UDim2.new(1, 0, 0, 40); TopBar.BackgroundTransparency = 1
+local CloseBtn = Instance.new("TextButton", TopBar); CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(1, -35, 0, 5); CloseBtn.Text = "×"; CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50); CloseBtn.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", CloseBtn)
+local NightBtn = Instance.new("TextButton", TopBar); NightBtn.Size = UDim2.new(0, 60, 0, 30); NightBtn.Position = UDim2.new(1, -100, 0, 5); NightBtn.Text = "NIGHT"; NightBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55); NightBtn.TextColor3 = Color3.new(1,1,1); NightBtn.Font = Enum.Font.GothamBold; NightBtn.TextSize = 10; Instance.new("UICorner", NightBtn)
+
+NightBtn.MouseButton1Click:Connect(function()
+    _G.Config.Night = not _G.Config.Night
+    NightBtn.BackgroundColor3 = _G.Config.Night and Color3.fromRGB(60, 100, 255) or Color3.fromRGB(40, 40, 55)
+    if _G.Config.Night then OriginalTime = Lighting.ClockTime; Lighting.ClockTime = 0 else Lighting.ClockTime = OriginalTime end
+end)
+
+local Container = Instance.new("ScrollingFrame", MainFrame); Container.Position = UDim2.new(0, 0, 0, 45); Container.Size = UDim2.new(1, 0, 1, -55); Container.BackgroundTransparency = 1; Container.ScrollBarThickness = 0
+Instance.new("UIListLayout", Container).Padding = UDim.new(0, 8); Container.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- [[ КОНСТРУКТОРЫ ]]
+local function CreateToggle(name, callback)
+    local Btn = Instance.new("TextButton", Container); Btn.Size = UDim2.new(0, 220, 0, 35); Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55); Btn.Text = name; Btn.TextColor3 = Color3.new(0.8, 0.8, 0.8); Btn.Font = Enum.Font.Gotham; Instance.new("UICorner", Btn)
+    local active = false
+    Btn.MouseButton1Click:Connect(function() active = not active; Btn.BackgroundColor3 = active and Color3.fromRGB(60, 100, 255) or Color3.fromRGB(40, 40, 55); callback(active) end)
+end
+
+local function CreateSlider(name, min, max, start, callback)
+    local SliderCont = Instance.new("Frame", Container); SliderCont.Size = UDim2.new(0, 220, 0, 45); SliderCont.BackgroundTransparency = 1
+    local Label = Instance.new("TextLabel", SliderCont); Label.Size = UDim2.new(1, 0, 0, 20); Label.Text = name .. ": " .. start; Label.TextColor3 = Color3.new(1,1,1); Label.BackgroundTransparency = 1; Label.Font = Enum.Font.Gotham
+    local BG = Instance.new("Frame", SliderCont); BG.Size = UDim2.new(1, 0, 0, 4); BG.Position = UDim2.new(0, 0, 0.7, 0); BG.BackgroundColor3 = Color3.fromRGB(50, 50, 70); Instance.new("UICorner", BG)
+    local Fill = Instance.new("Frame", BG); Fill.Size = UDim2.new((start-min)/(max-min), 0, 1, 0); Fill.BackgroundColor3 = Color3.fromRGB(80, 150, 255); Instance.new("UICorner", Fill)
+    local function update(input)
+        local per = math.clamp((input.Position.X - BG.AbsolutePosition.X) / BG.AbsoluteSize.X, 0, 1)
+        Fill.Size = UDim2.new(per, 0, 1, 0); local val = math.floor(min + (max - min) * per); Label.Text = name .. ": " .. val; callback(val)
+    end
+    BG.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then local con; con = UserInputService.InputChanged:Connect(function(m) update(m) end); local endCon; endCon = UserInputService.InputEnded:Connect(function() con:Disconnect(); endCon:Disconnect() end); update(i) end end)
+end
+
+-- [[ НАСТРОЙКИ ]]
+CreateToggle("RGB Skin", function(v) _G.Config.RGB = v end)
+CreateToggle("Thin Arms", function(v) _G.Config.ThinArms = v end)
+CreateToggle("Nearest ESP", function(v) _G.Config.ESP = v end)
+CreateToggle("TpSpeed", function(v) _G.Config.TpSpeed = v end)
+CreateToggle("TpJump", function(v) _G.Config.TpJump = v end)
+CreateToggle("Noclip", function(v) _G.Config.Noclip = v end)
+CreateSlider("Field of View", 70, 120, 100, function(v) _G.Config.FieldOfView = v end)
+CreateSlider("Speed Boost", 1, 15, 2, function(v) _G.Config.TpMultiplier = v end)
+CreateSlider("Jump Height", 1, 100, 15, function(v) _G.Config.TpJumpPower = v end)
+
+-- [[ ЛОГИКА ОБХОДА И ОСНОВНОЙ ЦИКЛ ]]
+local function GetClosest()
+    local near, dist = nil, math.huge
+    for _, p in pairs(Players:GetPlayers()) do 
+        if p ~= Player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then 
+            local d = (Player.Character.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+            if d < dist then dist = d; near = p.Character end 
+        end 
+    end
+    return near
+end
+
+RunService.Heartbeat:Connect(function(dt)
+    local char = Player.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local rainbow = Color3.fromHSV(tick() % 5 / 5, 1, 1)
+
+    -- [[ ОБХОД (ANTI-RESET) ]]
+    if _G.Config.Noclip then
+        for _, p in pairs(char:GetDescendants()) do if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end end
+    end
+    if hum then
+        local w, d = hum:FindFirstChild("BodyWidthScale"), hum:FindFirstChild("BodyDepthScale")
+        if w and _G.Config.ThinArms and w.Value ~= 0.4 then w.Value = 0.4 end
+        if d and _G.Config.ThinArms and d.Value ~= 0.4 then d.Value = 0.4 end
+    end
+
+    -- [[ ОСНОВНАЯ ЛОГИКА ]]
+    if not hrp then return end
+    Camera.FieldOfView = _G.Config.FieldOfView
+    
+    if _G.Config.ESP then 
+        local target = GetClosest()
+        TargetHighlight.Parent = target or nil
+        TargetHighlight.FillColor = rainbow
+        TargetHighlight.OutlineColor = rainbow
+        TargetHighlight.Enabled = target ~= nil
+    else 
+        TargetHighlight.Enabled = false 
+    end
+    
+    if _G.Config.TpSpeed and hum and hum.MoveDirection.Magnitude > 0 then 
+        hrp.CFrame += hum.MoveDirection * (hum.WalkSpeed * dt * (_G.Config.TpMultiplier - 1)) 
+    end
+    
+    if _G.Config.RGB then 
+        for _, p in pairs(char:GetChildren()) do if p:IsA("BasePart") then p.Color = rainbow end end 
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if _G.Config.TpJump and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then 
+        Player.Character.HumanoidRootPart.CFrame += Vector3.new(0, _G.Config.TpJumpPower, 0) 
+    end
+end)
+
+-- [[ УПРАВЛЕНИЕ ]]
+local function ToggleUI(s) MainFrame.Visible = s; OpenBtn.Visible = not s; TweenService:Create(Blur, TweenInfo.new(0.3), {Size = s and 15 or 0}):Play() end
+CloseBtn.MouseButton1Click:Connect(function() ToggleUI(false) end); OpenBtn.MouseButton1Click:Connect(function() ToggleUI(true) end)
